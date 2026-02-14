@@ -1,106 +1,77 @@
-import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import { useModuloCycle } from '@/hooks/useModuloCycle';
-import { LootSystem } from '@/components/game/LootSystem';
-import { EnemySpawner } from '@/components/game/EnemySpawner';
-import { CycleVisualizer } from '@/components/game/CycleVisualizer';
-import { MathExplainer } from '@/components/game/MathExplainer';
-import { RotateCcw, Play, Pause, FastForward } from 'lucide-react';
+import { ButterflyCanvas } from '@/components/game/ButterflyCanvas';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { RotateCcw, Sparkles } from 'lucide-react';
 
 const Index = () => {
-  const [autoPlay, setAutoPlay] = useState(false);
-  const { current, history, stepCount, uniqueVisited, cycleComplete, step, reset } = useModuloCycle();
+  const { current, stepCount, uniqueVisited, step, reset } = useModuloCycle();
 
-  // Auto-play functionality
-  useState(() => {
-    if (!autoPlay) return;
-    const interval = setInterval(step, 200);
-    return () => clearInterval(interval);
-  });
+  // Derive flap info for display
+  const flapPhase = (current % 1000) / 1000;
+  const flapAngle = Math.abs(Math.sin(flapPhase * Math.PI * 2));
+  const flapSpeed = 0.5 + ((current * 7) % 1000) / 1000 * 2;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Modulo Cycle Game Mechanics
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Demonstrating deterministic pseudorandomness using x<sub>n+1</sub> = (x<sub>n</sub> - 101) mod 1000
-              </p>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Canvas background */}
+      <ButterflyCanvas cycleValue={current} stepCount={stepCount} />
+
+      {/* Overlay UI */}
+      <div className="fixed inset-0 pointer-events-none z-10">
+        {/* Top info bar */}
+        <div className="absolute top-0 left-0 right-0 p-4 flex items-start justify-between">
+          <div className="pointer-events-auto space-y-2">
+            <h1 className="text-xl font-bold text-foreground/90 drop-shadow-lg">
+              Modulo Butterfly
+            </h1>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              x<sub>n+1</sub> = (x<sub>n</sub> - 101) mod 1000 — each step changes the flap pattern
+            </p>
+          </div>
+          <div className="pointer-events-auto flex flex-col items-end gap-2">
+            <Badge variant="outline" className="font-mono text-sm bg-background/60 backdrop-blur">
+              Seed: {String(current).padStart(3, '0')}
+            </Badge>
+            <Badge variant="secondary" className="font-mono text-xs bg-background/60 backdrop-blur">
+              Step {stepCount} · {uniqueVisited}/1000
+            </Badge>
+          </div>
+        </div>
+
+        {/* Bottom controls */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <div className="max-w-md mx-auto space-y-4">
+            {/* Flap stats */}
+            <div className="flex justify-center gap-4 text-xs text-muted-foreground">
+              <span>Angle: {(flapAngle * 100).toFixed(0)}%</span>
+              <span>•</span>
+              <span>Speed: {flapSpeed.toFixed(2)}x</span>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => reset()}>
+
+            {/* Buttons */}
+            <div className="flex gap-3 justify-center pointer-events-auto">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => reset()}
+                className="bg-background/60 backdrop-blur border-border/50"
+              >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Reset
               </Button>
-              <Button variant="outline" size="sm" onClick={step}>
-                <FastForward className="h-4 w-4 mr-2" />
-                Step
+              <Button
+                size="lg"
+                onClick={step}
+                className="min-w-[200px] text-lg font-bold bg-primary/80 backdrop-blur hover:bg-primary transition-all hover:scale-105"
+              >
+                <Sparkles className="h-5 w-5 mr-2" />
+                Flap Wings
               </Button>
             </div>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Left Column - Visualizer */}
-          <div className="space-y-6">
-            <CycleVisualizer
-              current={current}
-              history={history}
-              stepCount={stepCount}
-              uniqueVisited={uniqueVisited}
-              cycleComplete={cycleComplete}
-            />
-            <MathExplainer />
-          </div>
-
-          {/* Right Column - Game Demos */}
-          <div>
-            <Tabs defaultValue="loot" className="w-full">
-              <TabsList className="w-full mb-4">
-                <TabsTrigger value="loot" className="flex-1">🎁 Loot Drops</TabsTrigger>
-                <TabsTrigger value="enemies" className="flex-1">👹 Enemy Spawns</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="loot" className="mt-0">
-                <LootSystem 
-                  cycleValue={current} 
-                  onDrop={step}
-                  dropCount={stepCount}
-                />
-              </TabsContent>
-              
-              <TabsContent value="enemies" className="mt-0">
-                <EnemySpawner 
-                  cycleValue={current} 
-                  onSpawn={step}
-                  stepCount={stepCount}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border/50 mt-12 py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>
-            Because 101 is coprime with 1000, this sequence visits all 1000 values exactly once before repeating.
-          </p>
-          <p className="mt-1">
-            This pattern is used in games for fair loot tables, procedural generation, and reproducible randomness.
-          </p>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };
