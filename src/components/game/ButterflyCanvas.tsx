@@ -7,39 +7,74 @@ interface ButterflyCanvasProps {
 
 const TAU = Math.PI * 2;
 
-// Derive all visual parameters from the cycle value
+// Poem fragments that orbit the moth
+const POEM_LINES = [
+  'asexual gold diggers',
+  'life is never arithmetic',
+  'your mind is the devil',
+  'the rarest really isnt',
+  'gods can do no wrong',
+  'i accepted her faith',
+  'women dont like sex',
+  'they actually dont feel it',
+  'look like sirens',
+  '1 in a million',
+  'youre a ten youre 1 in a million',
+  'nine or less is where 95% lie',
+  'what if she lied?',
+  'i wasnt worthy of her face',
+  'she was a goddess',
+  'importance of arithmetic',
+  'live long enough youll forget it',
+  'trips and presents',
+  'all you can eat dining',
+  'he has no appetite',
+];
+
 function getCycleParams(value: number) {
   const v = value / 1000;
   return {
-    // Color: harsh warm tones — burnt orange to sickly yellow-green
-    hue: 15 + (value % 300) / 300 * 40,
-    saturation: 55 + (value % 250) / 250 * 35,
-    lightness: 35 + (value % 200) / 200 * 20,
-    // Wing pattern: vein angle offsets
-    veinBend: 0.6 + ((value * 3) % 1000) / 1000 * 0.8,
-    // Spot count & positions seed
+    // Acid punk palette — toxic greens, hot pinks, bile yellows
+    hue: ((value * 3) % 360),
+    saturation: 70 + (value % 200) / 200 * 25,
+    lightness: 40 + (value % 150) / 150 * 25,
+    veinBend: 0.5 + ((value * 3) % 1000) / 1000 * 1.0,
     spotSeed: (value * 13) % 1000,
-    spotCount: 3 + ((value * 7) % 5),
-    // Size variation
-    sizeMultiplier: 0.8 + ((value * 11) % 1000) / 1000 * 0.35,
-    // Position offset from center
-    offsetX: Math.sin(v * TAU * 3) * 40,
-    offsetY: Math.cos(v * TAU * 2) * 30,
-    // Flap
+    spotCount: 2 + ((value * 7) % 6),
+    sizeMultiplier: 0.75 + ((value * 11) % 1000) / 1000 * 0.4,
+    offsetX: Math.sin(v * TAU * 3) * 35,
+    offsetY: Math.cos(v * TAU * 2) * 25,
     flapAngle: Math.abs(Math.sin(v * Math.PI * 2)),
-    flapSpeed: 0.5 + ((value * 7) % 1000) / 1000 * 2,
-    // Stripe thickness — thicker, rougher
-    stripeWidth: 2 + ((value * 17) % 1000) / 1000 * 3,
-    // Distortion seed for "ugly" imperfection
+    flapSpeed: 0.4 + ((value * 7) % 1000) / 1000 * 1.8,
+    stripeWidth: 2.5 + ((value * 17) % 1000) / 1000 * 3.5,
     distortSeed: (value * 31) % 1000,
+    // Tatter amount — how torn the wings are
+    tatterAmount: 0.3 + ((value * 23) % 1000) / 1000 * 0.7,
+    // Which acid color scheme
+    colorScheme: Math.floor((value * 7) % 4),
   };
 }
 
-// Jitter a point for hand-drawn feel
+// Get punk color from scheme
+function getPunkColors(scheme: number, hue: number) {
+  const schemes = [
+    // Toxic green + hot pink
+    { primary: `hsl(120, 85%, 40%)`, secondary: `hsl(330, 90%, 50%)`, accent: `hsl(60, 100%, 50%)` },
+    // Bile yellow + electric blue
+    { primary: `hsl(55, 90%, 45%)`, secondary: `hsl(200, 100%, 50%)`, accent: `hsl(0, 90%, 45%)` },
+    // Blood red + acid green
+    { primary: `hsl(0, 80%, 40%)`, secondary: `hsl(90, 100%, 45%)`, accent: `hsl(280, 80%, 50%)` },
+    // Bruise purple + safety orange
+    { primary: `hsl(270, 60%, 35%)`, secondary: `hsl(25, 100%, 55%)`, accent: `hsl(170, 90%, 40%)` },
+  ];
+  return schemes[scheme % schemes.length];
+}
+
 function jitter(val: number, seed: number, amount: number): number {
   return val + Math.sin(seed * 137.508) * amount;
 }
 
+// Draw a tattered, moth-like wing
 function drawWing(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -51,185 +86,153 @@ function drawWing(
   time: number
 ) {
   const mirror = side === 'left' ? -1 : 1;
-  const squeeze = 1 - effectiveFlap * 0.65;
+  const squeeze = 1 - effectiveFlap * 0.6;
   const s = scale / 40;
-  const bend = params.veinBend;
   const d = params.distortSeed;
-  const j = (v: number, i: number) => jitter(v, d + i * 73, 3 * s);
+  const tatter = params.tatterAmount;
+  const colors = getPunkColors(params.colorScheme, params.hue);
+  const j = (v: number, i: number) => jitter(v, d + i * 73, 4 * s * tatter);
 
   ctx.save();
   ctx.translate(cx, cy);
 
-  // === Upper wing — cel-shaded with thick rough outline ===
+  // === Upper wing — ragged, torn edges ===
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(
-    j(mirror * 15 * squeeze * s, 1), j(-60 * s, 2),
-    j(mirror * 80 * squeeze * s, 3), j(-90 * s, 4),
-    j(mirror * 95 * squeeze * s, 5), j(-55 * s, 6)
-  );
-  ctx.bezierCurveTo(
-    j(mirror * 105 * squeeze * s, 7), j(-30 * s, 8),
-    j(mirror * 90 * squeeze * s, 9), j(-5 * s, 10),
-    j(mirror * 50 * squeeze * s, 11), j(5 * s, 12)
-  );
-  ctx.bezierCurveTo(
-    j(mirror * 25 * squeeze * s, 13), j(10 * s, 14),
-    j(mirror * 5 * squeeze * s, 15), j(5 * s, 16),
-    0, 0
-  );
+  // Build wing with jagged control points
+  const upperPoints: [number, number][] = [];
+  const wingSpan = 100 * squeeze * s;
+  const wingHeight = 85 * s;
+  const segments = 14;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    // Base moth wing shape — broader, more rounded than butterfly
+    const baseX = mirror * wingSpan * Math.sin(t * Math.PI * 0.85);
+    const baseY = -wingHeight * (1 - t) * Math.sin(t * Math.PI);
+    // Add tatter — jagged tears
+    const tearX = Math.sin(d + i * 47) * 8 * s * tatter;
+    const tearY = Math.cos(d + i * 31) * 6 * s * tatter;
+    // Notches — missing chunks
+    const notch = Math.sin(d + i * 97) > 0.7 ? -12 * s * tatter : 0;
+    upperPoints.push([baseX + tearX + notch * mirror, baseY + tearY]);
+  }
+
+  ctx.moveTo(0, 0);
+  for (let i = 0; i < upperPoints.length - 1; i++) {
+    const [x1, y1] = upperPoints[i];
+    const [x2, y2] = upperPoints[i + 1];
+    const cpx = (x1 + x2) / 2 + Math.sin(d + i * 13) * 5 * s;
+    const cpy = (y1 + y2) / 2 + Math.cos(d + i * 19) * 3 * s;
+    ctx.quadraticCurveTo(cpx, cpy, x2, y2);
+  }
+  ctx.lineTo(0, 0);
   ctx.closePath();
 
-  // Flat cel-shaded fill — harsh two-tone
-  const upperGrad = ctx.createLinearGradient(
-    0, -80 * s,
-    mirror * 60 * squeeze * s, 10 * s
-  );
-  upperGrad.addColorStop(0, `hsl(${params.hue + 8}, ${params.saturation}%, ${params.lightness + 18}%)`);
-  upperGrad.addColorStop(0.45, `hsl(${params.hue}, ${params.saturation}%, ${params.lightness + 5}%)`);
-  upperGrad.addColorStop(0.46, `hsl(${params.hue - 5}, ${params.saturation - 10}%, ${params.lightness - 8}%)`);
-  upperGrad.addColorStop(1, `hsl(${params.hue - 12}, ${params.saturation - 15}%, ${params.lightness - 18}%)`);
-  ctx.fillStyle = upperGrad;
+  // Flat punk fill — harsh gradient
+  const grad = ctx.createLinearGradient(0, -wingHeight, mirror * wingSpan * 0.5, 0);
+  grad.addColorStop(0, colors.primary);
+  grad.addColorStop(0.4, colors.primary);
+  grad.addColorStop(0.41, colors.secondary);
+  grad.addColorStop(0.7, colors.secondary);
+  grad.addColorStop(0.71, 'hsl(0, 0%, 5%)');
+  grad.addColorStop(1, 'hsl(0, 0%, 5%)');
+  ctx.fillStyle = grad;
   ctx.fill();
 
-  // Thick, rough black outline — anime style
-  ctx.strokeStyle = 'hsl(0, 0%, 2%)';
-  ctx.lineWidth = 4 * s;
-  ctx.lineJoin = 'round';
+  // Thick black outline — uneven, punk
+  ctx.strokeStyle = 'hsl(0, 0%, 0%)';
+  ctx.lineWidth = 5 * s;
+  ctx.lineJoin = 'bevel';
   ctx.stroke();
 
-  // Second inner outline for depth
-  ctx.strokeStyle = `hsla(${params.hue - 10}, 40%, 20%, 0.5)`;
-  ctx.lineWidth = 1.5 * s;
-  ctx.stroke();
-
-  // Rough scratchy veins — uneven, hand-drawn
+  // X marks and slash marks across wings — punk patches
+  ctx.strokeStyle = colors.accent;
+  ctx.lineWidth = 2.5 * s;
   ctx.lineCap = 'round';
-  const veinAngles = [-75, -50, -25, 0, 10];
-  for (let vi = 0; vi < veinAngles.length; vi++) {
-    const angle = veinAngles[vi];
-    const rad = (angle * Math.PI) / 180;
-    const len = (55 + Math.abs(angle) * 0.4) * bend;
+  for (let i = 0; i < 3; i++) {
+    const seed = (d + i * 200) % 1000;
+    const px = mirror * (20 + seed % 50) * squeeze * s;
+    const py = -(20 + seed % 40) * s;
+    const sz = (8 + seed % 10) * s;
+    // X mark
+    ctx.beginPath();
+    ctx.moveTo(px - sz / 2, py - sz / 2);
+    ctx.lineTo(px + sz / 2, py + sz / 2);
+    ctx.moveTo(px + sz / 2, py - sz / 2);
+    ctx.lineTo(px - sz / 2, py + sz / 2);
+    ctx.stroke();
+  }
 
-    // Draw as multiple short jagged segments
+  // Scratchy veins — aggressive, angular
+  ctx.strokeStyle = 'hsla(0, 0%, 0%, 0.8)';
+  ctx.lineWidth = params.stripeWidth * s;
+  ctx.lineCap = 'butt';
+  const veinAngles = [-80, -55, -30, -5, 15];
+  for (let vi = 0; vi < veinAngles.length; vi++) {
+    const rad = (veinAngles[vi] * Math.PI) / 180;
+    const len = (50 + Math.abs(veinAngles[vi]) * 0.3) * params.veinBend;
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    const segments = 6;
-    for (let seg = 1; seg <= segments; seg++) {
-      const t = seg / segments;
-      const baseX = mirror * len * t * squeeze * s * Math.cos(rad);
-      const baseY = len * t * s * Math.sin(rad);
-      const wobble = Math.sin(d + vi * 50 + seg * 30) * 4 * s;
-      ctx.lineTo(baseX + wobble, baseY + wobble * 0.5);
+    const segs = 4;
+    for (let seg = 1; seg <= segs; seg++) {
+      const t = seg / segs;
+      const bx = mirror * len * t * squeeze * s * Math.cos(rad);
+      const by = len * t * s * Math.sin(rad);
+      const w = Math.sin(d + vi * 60 + seg * 40) * 5 * s;
+      ctx.lineTo(bx + w, by + w * 0.3);
     }
-    ctx.strokeStyle = `hsla(0, 0%, 3%, ${0.6 + Math.sin(d + vi) * 0.2})`;
-    ctx.lineWidth = params.stripeWidth * s * (0.7 + Math.sin(d + vi * 20) * 0.4);
     ctx.stroke();
   }
 
-  // Rough spots — imperfect circles
-  ctx.fillStyle = `hsla(45, 80%, 85%, 0.7)`;
-  for (let i = 0; i < params.spotCount; i++) {
-    const seed = (params.spotSeed + i * 197) % 1000;
-    const sx = mirror * (55 + (seed % 40)) * squeeze * s;
-    const sy = (-65 + (seed % 55)) * s;
-    const spotR = (2 + (seed % 4)) * s;
-    // Draw as wobbly ellipse
-    ctx.beginPath();
-    ctx.ellipse(
-      jitter(sx, seed, 2 * s),
-      jitter(sy, seed + 50, 2 * s),
-      spotR * 1.2, spotR * 0.8,
-      (seed % 30) * 0.1, 0, TAU
-    );
-    ctx.fill();
-    // Dark ring around spot
-    ctx.strokeStyle = 'hsla(0, 0%, 5%, 0.4)';
-    ctx.lineWidth = 1.5 * s;
-    ctx.stroke();
-  }
-
-  // === Lower wing ===
+  // === Lower wing — smaller, more tattered ===
   ctx.beginPath();
+  const lowerPoints: [number, number][] = [];
+  const lSpan = 72 * squeeze * s;
+  const lHeight = 65 * s;
+  const lSegs = 10;
+  for (let i = 0; i <= lSegs; i++) {
+    const t = i / lSegs;
+    const baseX = mirror * lSpan * Math.sin(t * Math.PI * 0.9);
+    const baseY = lHeight * t * Math.sin(t * Math.PI * 0.7);
+    const tearX = Math.sin(d + i * 53 + 500) * 7 * s * tatter;
+    const tearY = Math.cos(d + i * 37 + 500) * 5 * s * tatter;
+    const notch = Math.sin(d + i * 83 + 500) > 0.75 ? -10 * s * tatter : 0;
+    lowerPoints.push([baseX + tearX + notch * mirror, baseY + tearY]);
+  }
   ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(
-    j(mirror * 30 * squeeze * s, 20), j(10 * s, 21),
-    j(mirror * 75 * squeeze * s, 22), j(15 * s, 23),
-    j(mirror * 70 * squeeze * s, 24), j(45 * s, 25)
-  );
-  ctx.bezierCurveTo(
-    j(mirror * 65 * squeeze * s, 26), j(65 * s, 27),
-    j(mirror * 35 * squeeze * s, 28), j(70 * s, 29),
-    j(mirror * 15 * squeeze * s, 30), j(55 * s, 31)
-  );
-  ctx.bezierCurveTo(
-    j(mirror * 5 * squeeze * s, 32), j(40 * s, 33),
-    0, 20 * s,
-    0, 0
-  );
+  for (let i = 0; i < lowerPoints.length - 1; i++) {
+    const [x1, y1] = lowerPoints[i];
+    const [x2, y2] = lowerPoints[i + 1];
+    const cpx = (x1 + x2) / 2 + Math.sin(d + i * 17 + 500) * 4 * s;
+    const cpy = (y1 + y2) / 2;
+    ctx.quadraticCurveTo(cpx, cpy, x2, y2);
+  }
+  ctx.lineTo(0, 0);
   ctx.closePath();
 
-  // Cel-shaded lower wing
-  const lowerGrad = ctx.createLinearGradient(
-    mirror * 20 * squeeze * s, 10 * s,
-    mirror * 50 * squeeze * s, 65 * s
-  );
-  lowerGrad.addColorStop(0, `hsl(${params.hue + 3}, ${params.saturation - 5}%, ${params.lightness + 12}%)`);
-  lowerGrad.addColorStop(0.5, `hsl(${params.hue - 4}, ${params.saturation - 8}%, ${params.lightness - 2}%)`);
-  lowerGrad.addColorStop(0.51, `hsl(${params.hue - 10}, ${params.saturation - 15}%, ${params.lightness - 12}%)`);
-  lowerGrad.addColorStop(1, `hsl(${params.hue - 15}, ${params.saturation - 20}%, ${params.lightness - 22}%)`);
-  ctx.fillStyle = lowerGrad;
+  const lGrad = ctx.createLinearGradient(0, 0, mirror * lSpan * 0.5, lHeight);
+  lGrad.addColorStop(0, colors.secondary);
+  lGrad.addColorStop(0.55, colors.secondary);
+  lGrad.addColorStop(0.56, colors.primary);
+  lGrad.addColorStop(1, 'hsl(0, 0%, 8%)');
+  ctx.fillStyle = lGrad;
   ctx.fill();
-
-  // Thick outline
-  ctx.strokeStyle = 'hsl(0, 0%, 2%)';
-  ctx.lineWidth = 4 * s;
-  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'hsl(0, 0%, 0%)';
+  ctx.lineWidth = 5 * s;
+  ctx.lineJoin = 'bevel';
   ctx.stroke();
 
-  // Inner outline
-  ctx.strokeStyle = `hsla(${params.hue - 10}, 30%, 18%, 0.4)`;
+  // Safety pin marks on lower wing
+  ctx.strokeStyle = 'hsla(0, 0%, 80%, 0.6)';
   ctx.lineWidth = 1.5 * s;
-  ctx.stroke();
-
-  // Lower veins — jagged
-  const lowerVeins = [15, 35, 55];
-  for (let vi = 0; vi < lowerVeins.length; vi++) {
-    const angle = lowerVeins[vi];
-    const rad = (angle * Math.PI) / 180;
-    const len = 50 * bend;
+  for (let i = 0; i < 2; i++) {
+    const seed = (d + i * 300 + 700) % 1000;
+    const px = mirror * (15 + seed % 40) * squeeze * s;
+    const py = (15 + seed % 30) * s;
+    // Simple pin shape
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    const segments = 5;
-    for (let seg = 1; seg <= segments; seg++) {
-      const t = seg / segments;
-      const baseX = mirror * len * t * squeeze * s * Math.cos(rad) * 0.8;
-      const baseY = len * t * s * Math.sin(rad);
-      const wobble = Math.sin(d + vi * 80 + seg * 40) * 3 * s;
-      ctx.lineTo(baseX + wobble, baseY + wobble * 0.3);
-    }
-    ctx.strokeStyle = `hsla(0, 0%, 3%, ${0.5 + Math.sin(d + vi * 11) * 0.15})`;
-    ctx.lineWidth = params.stripeWidth * 0.8 * s * (0.6 + Math.sin(d + vi * 30) * 0.4);
-    ctx.stroke();
-  }
-
-  // Lower spots
-  ctx.fillStyle = `hsla(40, 70%, 80%, 0.6)`;
-  for (let i = 0; i < Math.max(2, params.spotCount - 1); i++) {
-    const seed = (params.spotSeed + i * 251 + 500) % 1000;
-    const sx = mirror * (28 + (seed % 35)) * squeeze * s;
-    const sy = (38 + (seed % 25)) * s;
-    const spotR = (1.5 + (seed % 3)) * s;
-    ctx.beginPath();
-    ctx.ellipse(
-      jitter(sx, seed + 100, 2 * s),
-      jitter(sy, seed + 150, 2 * s),
-      spotR, spotR * 0.7,
-      (seed % 20) * 0.15, 0, TAU
-    );
-    ctx.fill();
-    ctx.strokeStyle = 'hsla(0, 0%, 5%, 0.35)';
-    ctx.lineWidth = 1.2 * s;
+    ctx.arc(px, py, 4 * s, 0, Math.PI);
+    ctx.lineTo(px - 4 * s, py + 8 * s);
     ctx.stroke();
   }
 
@@ -245,95 +248,94 @@ function drawBody(
 ) {
   const s = scale / 40;
 
-  // Abdomen — thick outline
+  // Thick dark body
   ctx.beginPath();
-  ctx.ellipse(cx, cy + 15 * s, 5 * s, 22 * s, 0, 0, TAU);
-  ctx.fillStyle = 'hsl(0, 0%, 6%)';
+  ctx.ellipse(cx, cy + 12 * s, 5.5 * s, 24 * s, 0, 0, TAU);
+  ctx.fillStyle = 'hsl(0, 0%, 4%)';
   ctx.fill();
-  ctx.strokeStyle = 'hsl(0, 0%, 2%)';
-  ctx.lineWidth = 3 * s;
+  ctx.strokeStyle = 'hsl(0, 0%, 0%)';
+  ctx.lineWidth = 4 * s;
   ctx.stroke();
 
   // Thorax
   ctx.beginPath();
-  ctx.ellipse(cx, cy - 5 * s, 6 * s, 11 * s, 0, 0, TAU);
-  ctx.fillStyle = 'hsl(0, 0%, 8%)';
-  ctx.fill();
-  ctx.strokeStyle = 'hsl(0, 0%, 2%)';
-  ctx.lineWidth = 3 * s;
-  ctx.stroke();
-
-  // Head — slightly oversized, anime-style
-  ctx.beginPath();
-  ctx.arc(cx, cy - 19 * s, 7 * s, 0, TAU);
+  ctx.ellipse(cx, cy - 8 * s, 7 * s, 12 * s, 0, 0, TAU);
   ctx.fillStyle = 'hsl(0, 0%, 6%)';
   ctx.fill();
-  ctx.strokeStyle = 'hsl(0, 0%, 2%)';
-  ctx.lineWidth = 3 * s;
+  ctx.strokeStyle = 'hsl(0, 0%, 0%)';
+  ctx.lineWidth = 4 * s;
   ctx.stroke();
 
-  // Big anime eyes — dramatic highlights
+  // Head — big, expressive
+  ctx.beginPath();
+  ctx.arc(cx, cy - 22 * s, 8 * s, 0, TAU);
+  ctx.fillStyle = 'hsl(0, 0%, 5%)';
+  ctx.fill();
+  ctx.strokeStyle = 'hsl(0, 0%, 0%)';
+  ctx.lineWidth = 4 * s;
+  ctx.stroke();
+
+  // Eyes — dead, hollow, punk
   for (const dir of [-1, 1]) {
-    const ex = cx + dir * 3.5 * s;
-    const ey = cy - 20 * s;
-    // Eye white
+    const ex = cx + dir * 4 * s;
+    const ey = cy - 23 * s;
+    // Hollow circle eye
     ctx.beginPath();
-    ctx.arc(ex, ey, 3 * s, 0, TAU);
-    ctx.fillStyle = 'hsl(30, 60%, 35%)';
+    ctx.arc(ex, ey, 3.5 * s, 0, TAU);
+    ctx.fillStyle = 'hsl(0, 0%, 0%)';
     ctx.fill();
-    ctx.strokeStyle = 'hsl(0, 0%, 2%)';
-    ctx.lineWidth = 2 * s;
+    ctx.strokeStyle = 'hsl(0, 80%, 45%)';
+    ctx.lineWidth = 1.5 * s;
     ctx.stroke();
-    // Pupil
+    // Tiny angry pupil
     ctx.beginPath();
-    ctx.arc(ex + dir * 0.5 * s, ey + 0.3 * s, 1.8 * s, 0, TAU);
-    ctx.fillStyle = 'hsl(0, 0%, 3%)';
+    ctx.arc(ex, ey + 0.5 * s, 1 * s, 0, TAU);
+    ctx.fillStyle = 'hsl(0, 90%, 50%)';
     ctx.fill();
-    // Anime highlight
+    // X through the eye (dead punk)
+    if (Math.sin(time * 0.5 + dir) > 0.3) {
+      ctx.strokeStyle = 'hsl(0, 90%, 50%)';
+      ctx.lineWidth = 1 * s;
+      ctx.beginPath();
+      ctx.moveTo(ex - 2 * s, ey - 2 * s);
+      ctx.lineTo(ex + 2 * s, ey + 2 * s);
+      ctx.moveTo(ex + 2 * s, ey - 2 * s);
+      ctx.lineTo(ex - 2 * s, ey + 2 * s);
+      ctx.stroke();
+    }
+  }
+
+  // Antennae — sharp, aggressive
+  for (const dir of [-1, 1]) {
+    ctx.strokeStyle = 'hsl(0, 0%, 2%)';
+    ctx.lineWidth = 3 * s;
+    ctx.lineCap = 'round';
+    const twitch = Math.sin(time * 5 + dir * 3) * 6 * s;
     ctx.beginPath();
-    ctx.arc(ex + dir * 1 * s, ey - 1 * s, 0.8 * s, 0, TAU);
-    ctx.fillStyle = 'hsla(0, 0%, 100%, 0.9)';
+    ctx.moveTo(cx + dir * 4 * s, cy - 29 * s);
+    ctx.lineTo(cx + dir * 18 * s + twitch, cy - 52 * s);
+    ctx.lineTo(cx + dir * 30 * s + twitch * 0.5, cy - 48 * s);
+    ctx.stroke();
+    // Spike tip
+    ctx.beginPath();
+    ctx.arc(cx + dir * 30 * s + twitch * 0.5, cy - 48 * s, 2.5 * s, 0, TAU);
+    ctx.fillStyle = 'hsl(0, 0%, 2%)';
     ctx.fill();
   }
 
-  // Antennae — wiggly, expressive
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  for (const dir of [-1, 1]) {
-    ctx.strokeStyle = 'hsl(0, 0%, 4%)';
-    ctx.lineWidth = 2.5 * s;
+  // Body segments — harsh scratches
+  ctx.strokeStyle = 'hsla(0, 0%, 30%, 0.5)';
+  ctx.lineWidth = 1.5 * s;
+  for (let i = 0; i < 6; i++) {
+    const y = cy + i * 6 * s;
     ctx.beginPath();
-    ctx.moveTo(cx + dir * 3 * s, cy - 25 * s);
-    const wiggle = Math.sin(time * 3 + dir * 2) * 5 * s;
-    ctx.bezierCurveTo(
-      cx + dir * 12 * s + wiggle, cy - 45 * s,
-      cx + dir * 22 * s - wiggle * 0.5, cy - 55 * s,
-      cx + dir * 28 * s + wiggle * 0.3, cy - 52 * s
-    );
-    ctx.stroke();
-    // Antenna tip — small blob
-    ctx.beginPath();
-    ctx.arc(cx + dir * 28 * s + wiggle * 0.3, cy - 52 * s, 3 * s, 0, TAU);
-    ctx.fillStyle = 'hsl(25, 60%, 30%)';
-    ctx.fill();
-    ctx.strokeStyle = 'hsl(0, 0%, 2%)';
-    ctx.lineWidth = 2 * s;
-    ctx.stroke();
-  }
-
-  // Body segments — scratchy lines
-  ctx.strokeStyle = 'hsla(30, 20%, 25%, 0.6)';
-  ctx.lineWidth = 1 * s;
-  for (let i = 0; i < 5; i++) {
-    const y = cy + 5 * s + i * 6 * s;
-    ctx.beginPath();
-    ctx.moveTo(cx - 4 * s, y + Math.sin(i * 2.3) * s);
-    ctx.lineTo(cx + 4 * s, y - Math.sin(i * 1.7) * s);
+    ctx.moveTo(cx - 5 * s, y);
+    ctx.lineTo(cx + 5 * s, y);
     ctx.stroke();
   }
 }
 
-// Surrounding effects: orbiting cycle values + energy ring
+// Floating poem fragments + glitch effects
 function drawSurroundingEffects(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -342,125 +344,137 @@ function drawSurroundingEffects(
   cycleValue: number,
   stepCount: number,
   time: number,
-  history: number[]
+  history: number[],
+  w: number,
+  h: number
 ) {
-  // Outer ring — rough, hand-drawn style (draw multiple offset arcs)
-  const progress = (stepCount % 1000) / 1000;
-  for (let pass = 0; pass < 3; pass++) {
-    const offsetR = radius + (Math.sin(pass * 50) * 2);
-    ctx.beginPath();
-    ctx.arc(cx + Math.sin(pass) * 0.5, cy + Math.cos(pass) * 0.5, offsetR, -Math.PI / 2, -Math.PI / 2 + TAU * progress);
-    ctx.strokeStyle = `hsla(28, 70%, 50%, ${0.08 + progress * 0.15})`;
-    ctx.lineWidth = 1.5 + pass * 0.5;
-    ctx.stroke();
-  }
-
-  // Full ring — faint scratchy
-  ctx.setLineDash([4, 6]);
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, TAU);
-  ctx.strokeStyle = 'hsla(0, 0%, 100%, 0.04)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Orbiting values — monospace, fading
-  const displayCount = Math.min(12, history.length);
-  for (let i = 0; i < displayCount; i++) {
-    const val = history[history.length - 1 - i];
-    const age = i / displayCount;
-    const angle = -Math.PI / 2 + (i / displayCount) * TAU + time * 0.12;
-    const orbitR = radius * (0.82 + age * 0.25);
+  // Orbiting poem fragments
+  const lineCount = Math.min(8, POEM_LINES.length);
+  for (let i = 0; i < lineCount; i++) {
+    const lineIdx = (Math.floor(cycleValue / 100) + i) % POEM_LINES.length;
+    const line = POEM_LINES[lineIdx];
+    const age = i / lineCount;
+    const angle = (i / lineCount) * TAU + time * 0.08;
+    const orbitR = radius * (0.7 + age * 0.5);
     const px = cx + Math.cos(angle) * orbitR;
     const py = cy + Math.sin(angle) * orbitR;
 
-    const alpha = 0.7 - age * 0.6;
-    const size = 13 - age * 5;
+    const alpha = 0.5 - age * 0.4;
+    const size = 11 - age * 4;
 
-    ctx.font = `bold ${Math.max(8, size)}px monospace`;
-    ctx.fillStyle = `hsla(35, 60%, 60%, ${alpha})`;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(Math.sin(time * 0.3 + i) * 0.15);
+    ctx.font = `italic ${Math.max(7, size)}px monospace`;
+    ctx.fillStyle = `hsla(0, 0%, 70%, ${alpha})`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.fillText(line, 0, 0);
+    ctx.restore();
+  }
+
+  // Cycle progress — rough dashed ring
+  const progress = (stepCount % 1000) / 1000;
+  ctx.setLineDash([6, 8]);
+  for (let pass = 0; pass < 2; pass++) {
+    ctx.beginPath();
+    ctx.arc(cx + (pass - 0.5) * 1.5, cy, radius * 0.5, -Math.PI / 2, -Math.PI / 2 + TAU * progress);
+    ctx.strokeStyle = `hsla(0, 70%, 50%, ${0.1 + progress * 0.2})`;
+    ctx.lineWidth = 2 + pass;
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Orbiting numbers — raw
+  const displayCount = Math.min(10, history.length);
+  for (let i = 0; i < displayCount; i++) {
+    const val = history[history.length - 1 - i];
+    const age = i / displayCount;
+    const angle = -Math.PI / 2 + (i / displayCount) * TAU + time * 0.15;
+    const orbitR = radius * 0.45 * (0.8 + age * 0.3);
+    const px = cx + Math.cos(angle) * orbitR;
+    const py = cy + Math.sin(angle) * orbitR;
+
+    const alpha = 0.6 - age * 0.5;
+    ctx.font = `bold ${Math.max(8, 12 - age * 5)}px monospace`;
+    ctx.fillStyle = `hsla(55, 80%, 55%, ${alpha})`;
+    ctx.textAlign = 'center';
     ctx.fillText(String(val).padStart(3, '0'), px, py);
   }
 
-  // Pulsing dots — rough, irregular
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * TAU + time * 0.25;
-    const wobble = Math.sin(time * 2 + i * 3) * 3;
-    const px = cx + Math.cos(angle) * (radius + wobble);
-    const py = cy + Math.sin(angle) * (radius + wobble);
-    const pulse = 1.5 + Math.sin(time * 3 + i) * 0.8;
-    ctx.beginPath();
-    ctx.arc(px, py, pulse, 0, TAU);
-    ctx.fillStyle = `hsla(30, 80%, 55%, ${0.15 + Math.sin(time * 2 + i) * 0.1})`;
-    ctx.fill();
-  }
-
-  // Radiating scratch marks on step flash
-  const flash = Math.max(0, 1 - (time % 1) * 3);
-  if (flash > 0) {
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * TAU + cycleValue * 0.01;
-      const innerR = radius * 0.25;
-      const outerR = radius * (0.45 + flash * 0.35);
-      ctx.beginPath();
-      ctx.moveTo(
-        cx + Math.cos(angle) * innerR + Math.sin(i * 7) * 2,
-        cy + Math.sin(angle) * innerR + Math.cos(i * 5) * 2
-      );
-      ctx.lineTo(
-        cx + Math.cos(angle) * outerR,
-        cy + Math.sin(angle) * outerR
-      );
-      ctx.strokeStyle = `hsla(35, 70%, 55%, ${flash * 0.25})`;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+  // Glitch lines — horizontal tears across screen
+  const glitchIntensity = Math.sin(time * 7) > 0.85 ? 1 : Math.sin(time * 13) > 0.95 ? 0.5 : 0;
+  if (glitchIntensity > 0) {
+    for (let i = 0; i < 5; i++) {
+      const gy = (Math.sin(time * 17 + i * 100) * 0.5 + 0.5) * h;
+      const gw = 50 + Math.sin(time * 23 + i * 50) * 200;
+      const gx = Math.sin(time * 11 + i * 70) * 40;
+      ctx.fillStyle = `hsla(${(cycleValue + i * 60) % 360}, 90%, 50%, ${0.15 * glitchIntensity})`;
+      ctx.fillRect(gx, gy, gw, 2 + Math.random() * 3);
     }
   }
 }
 
-// Floating debris — dust motes, pollen, imperfect particles
-function drawAmbient(ctx: CanvasRenderingContext2D, w: number, h: number, time: number, hue: number) {
-  for (let i = 0; i < 30; i++) {
+// Ambient — floating ash, embers, debris
+function drawAmbient(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
+  for (let i = 0; i < 35; i++) {
     const seed = i * 137.508;
-    const px = (seed * 7.3) % w;
-    const py = ((seed * 3.7 + time * 10) % (h + 40)) - 20;
-    const size = 0.8 + (seed % 4);
-    const alpha = 0.06 + Math.sin(time * 0.7 + i) * 0.04;
+    const px = (seed * 7.3 + Math.sin(time * 0.5 + i) * 20) % w;
+    const py = ((seed * 3.7 + time * 8) % (h + 40)) - 20;
+    const alpha = 0.04 + Math.sin(time * 0.5 + i) * 0.03;
 
     ctx.save();
     ctx.translate(px, py);
-    ctx.rotate(time * 0.3 + i);
-    // Some are dots, some are tiny scratches
-    if (i % 3 === 0) {
-      ctx.beginPath();
-      ctx.moveTo(-size, 0);
-      ctx.lineTo(size, 0);
-      ctx.strokeStyle = `hsla(${hue + 10}, 50%, 50%, ${alpha * 2})`;
+    ctx.rotate(time * 0.2 + i * 0.5);
+
+    if (i % 4 === 0) {
+      // Tiny X
+      const sz = 2 + (seed % 3);
+      ctx.strokeStyle = `hsla(0, 60%, 50%, ${alpha * 3})`;
       ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(-sz, -sz); ctx.lineTo(sz, sz);
+      ctx.moveTo(sz, -sz); ctx.lineTo(-sz, sz);
+      ctx.stroke();
+    } else if (i % 3 === 0) {
+      // Dash
+      ctx.strokeStyle = `hsla(55, 70%, 50%, ${alpha * 2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-3, 0); ctx.lineTo(3, 0);
       ctx.stroke();
     } else {
+      // Dot
       ctx.beginPath();
-      ctx.arc(0, 0, size, 0, TAU);
-      ctx.fillStyle = `hsla(${hue}, 40%, 45%, ${alpha})`;
+      ctx.arc(0, 0, 1 + (seed % 2), 0, TAU);
+      ctx.fillStyle = `hsla(0, 0%, 60%, ${alpha})`;
       ctx.fill();
     }
     ctx.restore();
   }
 }
 
-// Scanline / noise overlay for gritty feel
+// Scanlines + VHS noise
 function drawNoiseOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
-  // Faint horizontal scanlines
-  ctx.fillStyle = 'hsla(0, 0%, 0%, 0.03)';
-  for (let y = 0; y < h; y += 3) {
+  // Scanlines
+  ctx.fillStyle = 'hsla(0, 0%, 0%, 0.04)';
+  for (let y = 0; y < h; y += 2) {
     ctx.fillRect(0, y, w, 1);
   }
-  // Occasional flicker
-  const flicker = Math.sin(time * 17) > 0.97 ? 0.04 : 0;
-  if (flicker > 0) {
-    ctx.fillStyle = `hsla(0, 0%, 100%, ${flicker})`;
+  // VHS tracking error
+  const trackingError = Math.sin(time * 11) > 0.92;
+  if (trackingError) {
+    const bandY = (time * 100) % h;
+    const bandH = 15 + Math.sin(time * 30) * 10;
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    // Shift a horizontal band
+    ctx.drawImage(ctx.canvas, 0, bandY, w, bandH, 8, bandY, w, bandH);
+    ctx.restore();
+  }
+  // Occasional full-screen flicker
+  if (Math.sin(time * 19) > 0.98) {
+    ctx.fillStyle = 'hsla(0, 0%, 100%, 0.03)';
     ctx.fillRect(0, 0, w, h);
   }
 }
@@ -473,7 +487,6 @@ export const ButterflyCanvas = ({ cycleValue, stepCount }: ButterflyCanvasProps)
   const prevPosRef = useRef({ x: 0, y: 0, scale: 1 });
   const historyRef = useRef<number[]>([cycleValue]);
 
-  // Track history
   useEffect(() => {
     historyRef.current = [...historyRef.current.slice(-20), cycleValue];
   }, [cycleValue]);
@@ -490,16 +503,14 @@ export const ButterflyCanvas = ({ cycleValue, stepCount }: ButterflyCanvasProps)
     const h = canvas.height;
     const baseCx = w / 2;
     const baseCy = h / 2;
-    const baseScale = Math.min(w, h) * 0.2;
+    const baseScale = Math.min(w, h) * 0.18;
 
     timeRef.current += 0.016 * params.flapSpeed;
 
-    // Smooth interpolation for flap
     prevFlapRef.current += (params.flapAngle - prevFlapRef.current) * 0.08;
     const breathe = Math.sin(timeRef.current * 1.5) * 0.03;
     const effectiveFlap = Math.max(0, Math.min(1, prevFlapRef.current + breathe));
 
-    // Smooth interpolation for position and size
     const targetX = baseCx + params.offsetX;
     const targetY = baseCy + params.offsetY;
     const targetScale = baseScale * params.sizeMultiplier;
@@ -511,31 +522,32 @@ export const ButterflyCanvas = ({ cycleValue, stepCount }: ButterflyCanvasProps)
     const cy = prevPosRef.current.y;
     const scale = prevPosRef.current.scale;
 
-    // Dark muted background — not pure black, slightly warm
-    ctx.fillStyle = 'hsl(20, 8%, 4%)';
+    // Near-black background
+    ctx.fillStyle = 'hsl(0, 0%, 2%)';
     ctx.fillRect(0, 0, w, h);
 
     // Ambient debris
-    drawAmbient(ctx, w, h, timeRef.current, params.hue);
+    drawAmbient(ctx, w, h, timeRef.current);
 
-    // Glow — muted, sickly
-    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, scale * 3.5);
-    glow.addColorStop(0, `hsla(${params.hue}, 50%, 35%, 0.08)`);
-    glow.addColorStop(0.4, `hsla(${params.hue}, 40%, 25%, 0.04)`);
+    // Dim toxic glow behind moth
+    const colors = getPunkColors(params.colorScheme, params.hue);
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, scale * 4);
+    glow.addColorStop(0, 'hsla(0, 70%, 30%, 0.06)');
+    glow.addColorStop(0.3, 'hsla(0, 50%, 20%, 0.03)');
     glow.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, w, h);
 
     // Surrounding effects
-    const effectRadius = scale * 3.2;
-    drawSurroundingEffects(ctx, cx, cy, effectRadius, cycleValue, stepCount, timeRef.current, historyRef.current);
+    const effectRadius = scale * 3.5;
+    drawSurroundingEffects(ctx, cx, cy, effectRadius, cycleValue, stepCount, timeRef.current, historyRef.current, w, h);
 
-    // Wings & body
+    // Moth
     drawWing(ctx, cx, cy, scale, effectiveFlap, 'right', params, timeRef.current);
     drawWing(ctx, cx, cy, scale, effectiveFlap, 'left', params, timeRef.current);
     drawBody(ctx, cx, cy, scale, timeRef.current);
 
-    // Noise overlay for grit
+    // Noise overlay
     drawNoiseOverlay(ctx, w, h, timeRef.current);
 
     animFrameRef.current = requestAnimationFrame(draw);
@@ -563,7 +575,7 @@ export const ButterflyCanvas = ({ cycleValue, stepCount }: ButterflyCanvasProps)
     <canvas
       ref={canvasRef}
       className="fixed inset-0 w-full h-full"
-      style={{ background: 'hsl(20, 8%, 4%)' }}
+      style={{ background: 'hsl(0, 0%, 2%)' }}
     />
   );
 };
